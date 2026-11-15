@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareSync — Smart Elderly Care & Assisted Living Ecosystem</title>
+  <meta name="description" content="CareSync: A hackathon MVP for elderly care management — medications, appointments, adherence tracking, and emergency SOS." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>" />
+</head>
+<body class="elderly-mode">
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOP BAR
+════════════════════════════════════════════════════════════ -->
+<header id="topbar">
+  <div class="topbar-brand">
+    <div class="logo-icon">🏥</div>
+    CareSync <span>Smart Elderly Care</span>
+  </div>
+  <div class="topbar-actions">
+    <span id="mode-badge" class="badge mode-badge elderly">Elderly Mode</span>
+    <button class="btn-topbar" id="btn-switch-mode" onclick="switchToCaretaker()">🔐 Caretaker Portal</button>
+    <button class="btn-topbar" id="lang-btn" onclick="toggleLang()">🇮🇳 हिन्दी</button>
+    <button class="btn-topbar" onclick="changeFontSize(2)" title="Increase font size">A+</button>
+    <button class="btn-topbar" onclick="changeFontSize(-2)" title="Decrease font size">A−</button>
+    <button class="btn-topbar danger-top" onclick="resetToSampleData(true)">🔄 Reset Demo</button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN APP
+════════════════════════════════════════════════════════════ -->
+<main id="app-container">
+
+  <!-- DISCLAIMER -->
+  <div id="disclaimer">
+    <span class="disc-icon">⚠️</span>
+    <span><strong>Hackathon Demo Prototype:</strong> All medication names, dosages, appointments, and patient data shown are <strong>fictional demonstration data only</strong>. This is NOT a medical device, NOT clinical advice, and NOT a substitute for professional healthcare. Always consult a licensed medical professional.</span>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────
+       ELDERLY VIEW (Default)
+  ───────────────────────────────────────────────────────── -->
+  <div id="elderly-view">
+
+    <!-- SOS BANNER -->
+    <div id="sos-banner">
+      <div class="sos-left">
+        <div class="sos-icon">🚨</div>
+        <div class="sos-text">
+          <h3 data-t="sos_title">🚨 Emergency SOS</h3>
+          <p data-t="sos_sub">Tap to alert your caretaker immediately</p>
+        </div>
+      </div>
+      <button class="btn-sos" onclick="triggerSOS()">🆘 TAP FOR EMERGENCY</button>
+    </div>
+
+    <!-- GREETING CARD -->
+    <div id="greeting-card" class="fade-in">
+      <div class="greet-left">
+        <div class="greet-date" id="greet-date"></div>
+        <h2 id="greet-text">Good Morning! 👋</h2>
+        <p class="greet-sub"><span id="greet-sub-meds">Loading...</span></p>
+      </div>
+      <div class="greet-right">
+        <div class="progress-label">Today's Progress</div>
+        <div id="progress-ring-wrap">
+          <svg width="80" height="80" viewBox="0 0 80 80">
+            <circle class="ring-bg" cx="40" cy="40" r="30"/>
+            <circle class="ring-fg" id="progress-ring-fg" cx="40" cy="40" r="30"/>
+          </svg>
+          <div id="progress-ring-text">0<small>/0</small></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- READ ALOUD -->
+    <button id="read-aloud-btn" onclick="readScheduleAloud()" data-t="read_aloud">🔊 Read My Schedule Aloud</button>
+
+    <!-- MOOD CHECK-IN -->
+    <div id="mood-section" class="fade-in">
+      <h3 data-t="mood_title">💬 How are you feeling right now?</h3>
+      <div class="mood-grid">
+        <button class="mood-btn" onclick="logMood('Happy','😊')">
+          <span class="mood-emoji">😊</span>
+          <span data-t="mood_happy">Happy 😊</span>
+        </button>
+        <button class="mood-btn" onclick="logMood('Tired','😴')">
+          <span class="mood-emoji">😴</span>
+          <span data-t="mood_tired">Tired 😴</span>
+        </button>
+        <button class="mood-btn" onclick="logMood('In Pain','😣')">
+          <span class="mood-emoji">😣</span>
+          <span data-t="mood_pain">In Pain 😣</span>
+        </button>
+        <button class="mood-btn" onclick="logMood('Dizzy','🌀')">
+          <span class="mood-emoji">🌀</span>
+          <span data-t="mood_dizzy">Dizzy 🌀</span>
+        </button>
+      </div>
+      <div id="mood-confirm" class="text-sm" style="color:#059669;font-weight:700;padding:.5rem 0;"></div>
+    </div>
+
+    <!-- TODAY'S MEDICATIONS -->
+    <section class="mb-3">
+      <div class="section-header">
+        <h2 class="section-title"><span class="icon">💊</span> <span data-t="today_meds">Today's Medications</span></h2>
+      </div>
+      <div id="conflict-banner" class="conflict-banner"></div>
+      <div class="med-cards-grid" id="med-cards-elderly"></div>
+    </section>
+
+    <!-- UPCOMING APPOINTMENTS -->
+    <section class="mb-3">
+      <div class="section-header">
+        <h2 class="section-title"><span class="icon">📅</span> <span data-t="upcoming_appts">Upcoming Appointments</span></h2>
+      </div>
+      <div class="appt-cards-grid" id="appt-cards-elderly"></div>
+    </section>
+
+  </div><!-- /elderly-view -->
+
+
+  <!-- ─────────────────────────────────────────────────────────
+       CARETAKER VIEW
+  ───────────────────────────────────────────────────────── -->
+  <div id="caretaker-view" style="display:none;">
+
+    <!-- Caretaker Header -->
+    <div id="caretaker-header" class="fade-in">
+      <div class="ct-avatar">👩‍⚕️</div>
+      <div>
+        <h3 id="ct-name">Sunita Kumar — Primary Caretaker</h3>
+        <p>Managing care for: <strong>Ramesh Kumar</strong> &nbsp;|&nbsp; CareSync Family Ecosystem</p>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div class="stat-grid" id="stat-cards"></div>
+
+    <!-- TABS -->
+    <div id="ct-tabs">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-medications">💊 Medications</button>
+        <button class="tab-btn" data-tab="tab-appointments">📅 Appointments</button>
+        <button class="tab-btn" data-tab="tab-adherence">📊 Adherence</button>
+        <button class="tab-btn" data-tab="tab-reminders">📧 Reminders</button>
+        <button class="tab-btn" data-tab="tab-discharge">📋 Discharge Parser</button>
+        <button class="tab-btn" data-tab="tab-log">📝 Activity Log</button>
+      </div>
+
+      <!-- TAB: MEDICATIONS -->
+      <div class="tab-panel active" id="tab-medications">
+        <div class="section-header mb-2">
+          <h2 class="section-title"><span class="icon">💊</span> Medication Management</h2>
+          <button class="btn btn-primary" onclick="openAddMedModal()">➕ <span data-t="add_medication">Add Medication</span></button>
+        </div>
+        <div class="med-cards-grid" id="med-cards-caretaker"></div>
+      </div>
+
+      <!-- TAB: APPOINTMENTS -->
+      <div class="tab-panel" id="tab-appointments">
+        <div class="section-header mb-2">
+          <h2 class="section-title"><span class="icon">📅</span> Appointment Management</h2>
+          <button class="btn btn-primary" onclick="openAddApptModal()">➕ <span data-t="add_appointment">Add Appointment</span></button>
+        </div>
+        <div class="appt-cards-grid" id="appt-cards-caretaker"></div>
+      </div>
+
+      <!-- TAB: ADHERENCE -->
+      <div class="tab-panel" id="tab-adherence">
+        <div id="adherence-section" class="card mb-2">
+          <div class="card-header">
+            <h3 class="section-title"><span class="icon">📊</span> <span data-t="adherence">Medication Adherence</span></h3>
+          </div>
+          <div class="card-body">
+            <div class="adh-pct" id="adh-pct">0%</div>
+            <div class="adh-label">Overall adherence rate based on today's doses</div>
+            <div class="adh-bar-wrap"><div class="adh-bar-fill" id="adh-bar" style="width:0%"></div></div>
+            <h4 style="font-size:.9rem;font-weight:800;color:var(--blue);margin-bottom:.6rem;" data-t="streak">7-Day Streak</h4>
+            <div class="streak-grid" id="streak-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: REMINDERS -->
+      <div class="tab-panel" id="tab-reminders">
+        <div class="card mb-2">
+          <div class="card-header">
+            <h3 class="section-title"><span class="icon">📧</span> <span data-t="reminder_centre">Reminder Centre</span></h3>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-muted mb-2">Configure the caretaker email, then use 1-click buttons to simulate notification emails. Each trigger shows a preview and logs the alert.</p>
+            <div class="reminder-email-input">
+              <label style="font-size:.82rem;font-weight:700;color:var(--slate-dark);align-self:center;" data-t="email_config">Caretaker Email:</label>
+              <input type="email" id="caretaker-email-input" placeholder="caretaker@example.com" />
+              <button class="btn btn-primary" onclick="saveEmail()"><span data-t="save_email">Save</span></button>
+            </div>
+            <div class="reminder-triggers">
+              <button class="btn btn-primary btn-lg" onclick="simulateReminder('dose')">💊 Simulate Dose Reminder</button>
+              <button class="btn btn-warn btn-lg" onclick="simulateReminder('missed')">⚠️ Simulate Missed Alert</button>
+              <button class="btn btn-secondary btn-lg" onclick="simulateReminder('appt')">📅 Simulate Appointment Reminder</button>
+            </div>
+            <p class="text-sm text-muted mt-2" style="font-style:italic;">Note: These are simulated frontend notification previews. The "Open in Email Client" button uses your device's email app (mailto:). No backend email system is active.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: DISCHARGE PARSER -->
+      <div class="tab-panel" id="tab-discharge">
+        <div class="card mb-2">
+          <div class="card-header">
+            <h3 class="section-title"><span class="icon">📋</span> <span data-t="discharge_parser">Discharge Note Parser</span></h3>
+          </div>
+          <div class="card-body">
+            <p class="text-sm text-muted mb-2">Paste a hospital discharge summary below. The parser will extract medications and appointments for caretaker review and confirmation before adding to the live schedule.</p>
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem;">
+              <button class="btn btn-secondary" onclick="loadSampleDischarge()" data-t="load_sample">📄 Load Sample Discharge</button>
+              <button class="btn btn-primary" onclick="extractDischarge()" data-t="extract_preview">🔍 Extract & Preview</button>
+            </div>
+            <textarea id="discharge-textarea" placeholder="Paste discharge summary here…"></textarea>
+            <div id="discharge-preview">
+              <h4 style="font-size:.9rem;font-weight:800;color:var(--blue);margin-bottom:.6rem;">Extracted Items — Review & Confirm:</h4>
+              <div id="discharge-items"></div>
+              <div style="display:flex;gap:.5rem;margin-top:.75rem;flex-wrap:wrap;">
+                <button class="btn btn-success" onclick="confirmDischarge()" data-t="confirm_add">✅ Confirm & Add to Schedule</button>
+                <button class="btn btn-ghost" onclick="document.getElementById('discharge-preview').style.display='none'">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: ACTIVITY LOG -->
+      <div class="tab-panel" id="tab-log">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="section-title"><span class="icon">📝</span> <span data-t="activity_log">Activity Log</span></h3>
+          </div>
+          <div class="card-body">
+            <div id="activity-log-list"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ct-tabs -->
+  </div><!-- /caretaker-view -->
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════════════════ -->
+<footer id="footer">
+  <strong>⚠️ HACKATHON PROTOTYPE DISCLAIMER:</strong> CareSync is a demonstration MVP built for hackathon purposes. All patient data, medications, and appointments shown are <strong>entirely fictional</strong>. This application is NOT a medical device and does NOT provide clinical advice, verify drug interactions, or replace professional healthcare. Emergency SOS, reminder emails, and schedule warnings are frontend simulation features only — no backend system or certified clinical functionality is active.<br/>
+  <strong>Built with ❤️ using HTML5, CSS3 &amp; Vanilla JS &nbsp;|&nbsp; AI Tools: Google Antigravity &nbsp;|&nbsp; Demo PIN: 1234</strong>
+</footer>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════════════════════ -->
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pin-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>🔐 Caretaker & Family Portal</h3>
+      <button class="modal-close" onclick="closeModal('pin-modal'); qsa('.pin-digit').forEach(d=>d.value=''); document.getElementById('pin-error').style.display='none'">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="pin-demo-hint">
+        <span>Demo PIN for Judges</span>
+        <strong>1 2 3 4</strong>
+        <span>Enter the 4-digit PIN below to access the Caretaker Portal</span>
+      </div>
+      <p class="text-sm text-muted text-center mb-2">Select a role to manage care for Ramesh Kumar:</p>
+      <div style="display:flex;gap:.5rem;justify-content:center;margin-bottom:1rem;flex-wrap:wrap;">
+        <span class="badge badge-teal" style="padding:.4rem .9rem;font-size:.82rem;">👩‍⚕️ Primary Caretaker</span>
+        <span class="badge badge-blue" style="padding:.4rem .9rem;font-size:.82rem;">👨‍👩‍👧 Family Member</span>
+        <span class="badge badge-blue" style="padding:.4rem .9rem;font-size:.82rem;">👨‍⚕️ Healthcare Aide</span>
+      </div>
+      <div class="pin-input-wrap">
+        <input class="pin-digit" type="number" min="0" max="9" maxlength="1" inputmode="numeric" autocomplete="off" />
+        <input class="pin-digit" type="number" min="0" max="9" maxlength="1" inputmode="numeric" autocomplete="off" />
+        <input class="pin-digit" type="number" min="0" max="9" maxlength="1" inputmode="numeric" autocomplete="off" />
+        <input class="pin-digit" type="number" min="0" max="9" maxlength="1" inputmode="numeric" autocomplete="off" />
+      </div>
+      <div id="pin-error">Incorrect PIN. Please try again.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('pin-modal'); qsa('.pin-digit').forEach(d=>d.value=''); document.getElementById('pin-error').style.display='none'">Cancel</button>
+      <button class="btn btn-primary" onclick="enterCaretaker()">🔓 Enter Portal</button>
+    </div>
+  </div>
+</div>
+
+<!-- SOS MODAL -->
+<div class="modal-overlay" id="sos-modal">
+  <div class="modal">
+    <div class="sos-modal-header">
+      <span class="sos-big-icon">🚨</span>
+      <h3>Emergency SOS Activated</h3>
+      <p style="font-size:.9rem;opacity:.88;margin-top:.3rem;">Alert sent to caretaker. Use the links below to contact immediately.</p>
+    </div>
+    <div class="modal-body">
+      <p class="text-sm text-muted mb-2">Patient: <strong>Ramesh Kumar</strong> &nbsp;|&nbsp; Time: <strong id="sos-time"></strong></p>
+      <div style="display:flex;flex-direction:column;gap:.6rem;">
+        <a id="sos-mailto-link" href="#" class="btn btn-danger btn-full btn-lg" style="text-decoration:none;">📧 Email Caretaker (mailto:)</a>
+        <a id="sos-wa-link" href="#" target="_blank" class="btn btn-success btn-full btn-lg" style="text-decoration:none;background:#25D366;">💬 WhatsApp Alert (wa.me)</a>
+      </div>
+      <div style="background:var(--danger-bg);border:1.5px solid #FECACA;border-radius:var(--radius-sm);padding:.75rem;margin-top:1rem;font-size:.82rem;color:var(--danger);font-weight:600;">
+        ⚠️ This is a frontend simulation. In a production system, an automated backend alert and emergency services integration would activate automatically.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('sos-modal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT MEDICATION MODAL -->
+<div class="modal-overlay" id="med-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="med-modal-title">Add Medication</h3>
+      <button class="modal-close" onclick="closeModal('med-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="med-form" onsubmit="e => e.preventDefault()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Medication Name *</label>
+            <input type="text" id="med-form-name" placeholder="e.g. Amlodipine 5mg" required />
+          </div>
+          <div class="form-group">
+            <label>Time *</label>
+            <input type="time" id="med-form-time" required />
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Purpose / Description</label>
+            <input type="text" id="med-form-purpose" placeholder="e.g. Sample Blood Pressure Routine" />
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Food Instructions</label>
+            <input type="text" id="med-form-food" placeholder="e.g. After Breakfast, With Lunch" />
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Additional Notes</label>
+            <input type="text" id="med-form-note" placeholder="e.g. Take with a full glass of water" />
+          </div>
+        </div>
+        <p class="text-sm text-muted" style="font-style:italic;">⚠️ All entries are for demonstration purposes only. Not medical prescriptions.</p>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('med-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMedForm()">💾 Save Medication</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT APPOINTMENT MODAL -->
+<div class="modal-overlay" id="appt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="appt-modal-title">Add Appointment</h3>
+      <button class="modal-close" onclick="closeModal('appt-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="appt-form" onsubmit="e => e.preventDefault()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Doctor Name *</label>
+            <input type="text" id="appt-form-doctor" placeholder="e.g. Dr. Priya Sharma" required />
+          </div>
+          <div class="form-group">
+            <label>Specialty</label>
+            <input type="text" id="appt-form-spec" placeholder="e.g. Cardiology" />
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Hospital / Clinic</label>
+            <input type="text" id="appt-form-hospital" placeholder="e.g. City Heart Institute, Delhi" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date *</label>
+            <input type="date" id="appt-form-date" required />
+          </div>
+          <div class="form-group">
+            <label>Time</label>
+            <input type="text" id="appt-form-time" placeholder="e.g. 10:30 AM" />
+          </div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Preparation Notes</label>
+            <input type="text" id="appt-form-prep" placeholder="e.g. Fasting required (8 hours). Bring reports." />
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('appt-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveApptForm()">💾 Save Appointment</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMAIL PREVIEW MODAL -->
+<div class="modal-overlay" id="email-modal">
+  <div class="modal" style="max-width:580px;">
+    <div class="modal-header">
+      <h3>📧 Email Notification Preview</h3>
+      <button class="modal-close" onclick="closeModal('email-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#EFF6FF;border:1.5px solid #BAE6FD;border-radius:var(--radius-sm);padding:.6rem .9rem;margin-bottom:1rem;font-size:.8rem;color:#1E40AF;font-weight:600;">
+        📌 SIMULATED NOTIFICATION PREVIEW — This shows what an automated alert email would look like. Use "Open in Email Client" to send manually via your device's email app.
+      </div>
+      <div class="email-preview">
+        <div class="email-field"><strong>To:</strong> <span id="email-preview-to"></span></div>
+        <div class="email-field"><strong>Subject:</strong> <span id="email-preview-subject"></span></div>
+        <div class="email-field"><strong>Timestamp:</strong> <span id="email-preview-time"></span></div>
+        <div class="email-field"><strong>Body:</strong></div>
+        <div class="email-body-wrap" id="email-preview-body"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('email-modal')">Close</button>
+      <a id="email-mailto-btn" href="#" class="btn btn-primary" style="text-decoration:none;">📤 Open in Email Client (mailto:)</a>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+
+<!-- Inline fix: SOS time update and form submit prevention -->
+<script>
+  // Update SOS time when modal opens
+  const _origOpenModal = openModal;
+  window.openModal = function(id) {
+    _origOpenModal(id);
+    if (id === 'sos-modal') {
+      const st = document.getElementById('sos-time');
+      if (st) st.textContent = new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+    }
+  };
+  // Prevent form default submit
+  document.addEventListener('submit', e => e.preventDefault());
+</script>
+
+</body>
+</html>
